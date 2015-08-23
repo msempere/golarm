@@ -13,6 +13,8 @@ golarm.AddAlarm(golarm.SystemLoad(golarm.OneMinPeriod).Above(0.8).Run(func() {
 	}))
 ```
 
+![Usage example](http://i.imgur.com/FybUkVg.gif)
+
 ## Options
  - SystemLoad
  
