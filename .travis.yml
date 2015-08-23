@@ -5,6 +5,7 @@ go:
   - 1.4
     
 install:
+  - go get github.com/carlescere/scheduler
   - go get github.com/cloudfoundry/gosigar
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
