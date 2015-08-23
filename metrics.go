@@ -18,10 +18,11 @@ var (
 const (
 	free_ metric = iota + 1
 	used_
-	time
+	time_
 	status
 )
 
+// Linux process states to be used with status alarms
 const (
 	Sleeping state = iota + 1
 	Running
@@ -46,13 +47,14 @@ type stats struct {
 	metric metric
 }
 
+// Load average can be calculated for the last one minute, five minutes and fifteen minutes respectively. Load average is an indication of whether the system resources (mainly the CPU) are adequately available for the processes (system load) that are running, runnable or in uninterruptible sleep states during the previous n minutes.
 const (
 	OneMinPeriod period = iota + 1
 	FiveMinPeriod
 	FifteenMinPeriod
 )
 
-func getLoadAverage(p period, manager SigarMetrics, percentage bool) float64 {
+func getLoadAverage(p period, manager sigarMetrics, percentage bool) float64 {
 	average, err := manager.GetLoadAverage()
 	value := 0.0
 
@@ -75,7 +77,7 @@ func getLoadAverage(p period, manager SigarMetrics, percentage bool) float64 {
 	return value
 }
 
-func getPidState(pid uint, manager SigarMetrics) float64 {
+func getPidState(pid uint, manager sigarMetrics) float64 {
 	value, err := manager.GetProcState(int(pid))
 	if err != nil {
 		return 6.0
@@ -83,7 +85,7 @@ func getPidState(pid uint, manager SigarMetrics) float64 {
 	return states[string(value.State)]
 }
 
-func getPidMemory(pid uint, manager SigarMetrics, percentage bool) float64 {
+func getPidMemory(pid uint, manager sigarMetrics, percentage bool) float64 {
 	memory, err := manager.GetProcMem(int(pid))
 
 	if err != nil {
@@ -99,7 +101,7 @@ func getPidMemory(pid uint, manager SigarMetrics, percentage bool) float64 {
 }
 
 // get running time for PID in minutes
-func getPidTime(pid uint, manager SigarMetrics) float64 {
+func getPidTime(pid uint, manager sigarMetrics) float64 {
 	value, err := manager.GetProcTime(int(pid))
 
 	if err != nil {
@@ -108,7 +110,7 @@ func getPidTime(pid uint, manager SigarMetrics) float64 {
 	return float64(value.Total / 1000)
 }
 
-func getTotalMemory(manager SigarMetrics) float64 {
+func getTotalMemory(manager sigarMetrics) float64 {
 	mem, err := manager.GetMem()
 
 	if err != nil {
@@ -117,7 +119,7 @@ func getTotalMemory(manager SigarMetrics) float64 {
 	return float64(mem.Total)
 }
 
-func getTotalSwap(manager SigarMetrics) float64 {
+func getTotalSwap(manager sigarMetrics) float64 {
 	swap, err := manager.GetSwap()
 
 	if err != nil {
@@ -126,16 +128,7 @@ func getTotalSwap(manager SigarMetrics) float64 {
 	return float64(swap.Total)
 }
 
-func getUsedMemory(manager SigarMetrics) float64 {
-	mem, err := manager.GetMem()
-
-	if err != nil {
-		return 0.0
-	}
-	return float64(mem.Used)
-}
-
-func getUsedSwap(manager SigarMetrics) float64 {
+func getUsedSwap(manager sigarMetrics) float64 {
 	swap, err := manager.GetSwap()
 
 	if err != nil {
@@ -144,16 +137,7 @@ func getUsedSwap(manager SigarMetrics) float64 {
 	return float64(swap.Used)
 }
 
-func getFreeMemory(manager SigarMetrics) float64 {
-	mem, err := manager.GetMem()
-
-	if err != nil {
-		return 0.0
-	}
-	return float64(mem.Free)
-}
-
-func getFreeSwap(manager SigarMetrics) float64 {
+func getFreeSwap(manager sigarMetrics) float64 {
 	swap, err := manager.GetSwap()
 
 	if err != nil {
@@ -162,7 +146,7 @@ func getFreeSwap(manager SigarMetrics) float64 {
 	return float64(swap.Free)
 }
 
-func getActualUsedMemory(manager SigarMetrics, percentage bool) float64 {
+func getActualUsedMemory(manager sigarMetrics, percentage bool) float64 {
 	mem, err := manager.GetMem()
 
 	if err != nil {
@@ -172,12 +156,12 @@ func getActualUsedMemory(manager SigarMetrics, percentage bool) float64 {
 	value := float64(mem.ActualUsed) / 1048576
 
 	if percentage {
-		return 100.0 * (value / getTotalMemory(manager))
+		return 100.0 * (value / (getTotalMemory(manager) / 1048576))
 	}
 	return value
 }
 
-func getActualFreeMemory(manager SigarMetrics, percentage bool) float64 {
+func getActualFreeMemory(manager sigarMetrics, percentage bool) float64 {
 	mem, err := manager.GetMem()
 
 	if err != nil {
@@ -186,21 +170,21 @@ func getActualFreeMemory(manager SigarMetrics, percentage bool) float64 {
 	value := float64(mem.ActualFree) / 1048576
 
 	if percentage {
-		return 100.0 * (value / getTotalMemory(manager))
+		return 100.0 * (value / (getTotalMemory(manager) / 1048576))
 	}
 	return value
 }
 
-func getActualFreeSwap(manager SigarMetrics, percentage bool) float64 {
+func getActualFreeSwap(manager sigarMetrics, percentage bool) float64 {
 	value := float64(getFreeSwap(manager)) / 1048576
 
 	if percentage {
-		return 100.0 * (value / getTotalSwap(manager))
+		return 100.0 * (value / getTotalSwap(manager) / 1048576)
 	}
 	return value
 }
 
-func getActualUsedSwap(manager SigarMetrics, percentage bool) float64 {
+func getActualUsedSwap(manager sigarMetrics, percentage bool) float64 {
 	value := float64(getUsedSwap(manager)) / 1048576
 
 	if percentage {
@@ -209,7 +193,7 @@ func getActualUsedSwap(manager SigarMetrics, percentage bool) float64 {
 	return value
 }
 
-func getUptime(manager SigarMetrics) float64 {
+func getUptime(manager sigarMetrics) float64 {
 	value, err := manager.GetUpTime()
 	if err != nil {
 		return 0.0
