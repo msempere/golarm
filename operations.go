@@ -1,16 +1,64 @@
 package golarm
 
+func setMetric(a *Alarm, v float64, m metric) {
+	a.value = value{value: v, percentage: false}
+	a.stats.metric = m
+}
+
+func setComparison(a *Alarm, v float64, c comparison) {
+	a.value = value{value: v, percentage: false}
+	a.comparison = c
+}
+
+func isMetricCorrect(a *Alarm, v float64, m metric) bool {
+	if a.Err == nil {
+		switch m {
+		case free_:
+			if a.jobType == memoryAlarm || a.jobType == swapAlarm {
+				return true
+			}
+		case used_:
+			if a.jobType == memoryAlarm || a.jobType == swapAlarm || a.jobType == procAlarm {
+				return true
+			}
+		case time_:
+			if a.jobType == uptimeAlarm || a.jobType == procAlarm {
+				return true
+			}
+		case status:
+			if a.jobType != alertTypeNotDefined && a.jobType == procAlarm {
+				return true
+			}
+		}
+		a.Err = ErrIncorrectTypeForMetric
+	}
+	return false
+}
+
+func isComparisonCorrect(a *Alarm, v float64, c comparison) bool {
+	if a.Err == nil {
+		if a.comparison == comparisonNotDefined {
+			switch c {
+			case above, below, equal, belowEqual, aboveEqual:
+				if a.jobType != alertTypeNotDefined && a.stats.metric != status {
+					return true
+				}
+				a.Err = ErrIncorrectTypeForComparison
+
+			}
+		} else {
+			a.Err = ErrMultipleComparisonDefined
+		}
+	}
+	return false
+}
+
 // Free can only work with:
 //	- MemoryAlarm
 //	- SwapAlarm
-func (j *alarm) Free() *alarm {
-	if j.err == nil {
-		if j.jobType == memoryAlarm || j.jobType == swapAlarm {
-			(*j).value = value{value: not_set, percentage: false}
-			(*j).stats.metric = free_
-		} else {
-			(*j).err = ErrIncorrectTypeForFree
-		}
+func (j *Alarm) Free() *Alarm {
+	if isMetricCorrect(j, notSet, free_) {
+		setMetric(j, notSet, free_)
 	}
 	return j
 }
@@ -18,81 +66,67 @@ func (j *alarm) Free() *alarm {
 // Used can only work with:
 //	- MemoryAlarm
 //	- SwapAlarm
-//	- Procalarm -> used
-func (j *alarm) Used() *alarm {
-	if j.err == nil {
-		if j.jobType == memoryAlarm || j.jobType == swapAlarm || j.jobType == procAlarm {
-			(*j).value = value{value: not_set, percentage: false}
-			(*j).stats.metric = used_
-		} else {
-			(*j).err = ErrIncorrectTypeForUsed
-		}
+//	- ProcAlarm -> used
+func (j *Alarm) Used() *Alarm {
+	if isMetricCorrect(j, notSet, used_) {
+		setMetric(j, notSet, used_)
 	}
 	return j
 }
 
-// Used can only work with:
-//	- Uptime
-//	- Procalarm -> time
-func (j *alarm) RunningTime() *alarm {
-	if j.err == nil {
-		if j.jobType == uptimeAlarm || j.jobType == procAlarm {
-			(*j).value = value{value: not_set, percentage: false}
-			(*j).stats.metric = time
-		} else {
-			(*j).err = ErrIncorrectTypeForTime
-		}
+// RunningTime gets the time a process has been running
+func (j *Alarm) RunningTime() *Alarm {
+	if isMetricCorrect(j, notSet, time_) {
+		setMetric(j, notSet, time_)
 	}
 	return j
 }
 
-// Used can only work with:
-//	- Procalarm -> status
-func (j *alarm) Status(s state) *alarm {
-	if j.err == nil {
-		if j.jobType != alertTypeNotDefined && j.jobType == procAlarm {
-			(*j).value = value{value: not_set, percentage: false}
-			(*j).stats.proc.state = s
-			(*j).stats.metric = status
-		} else {
-			(*j).err = ErrIncorrectTypeForStatus
-		}
+// Status allows to specify the state for a given process
+func (j *Alarm) Status(s state) *Alarm {
+	if isMetricCorrect(j, notSet, status) {
+		setMetric(j, notSet, status)
+		(*j).stats.proc.state = s
 	}
 	return j
 }
 
-// Time = Minutes
-// Memory = MB
-func (j *alarm) Above(v float64) *alarm {
-	if j.err == nil {
-		if j.jobType != alertTypeNotDefined && j.stats.metric != status {
-			if j.comparison == comparisonNotDefined {
-				(*j).value = value{value: v, percentage: false}
-				(*j).comparison = above
-			} else {
-				(*j).err = ErrMultipleComparisonDefined
-			}
-		} else {
-			(*j).err = ErrIncorrectTypeForAbove
-		}
+// Above compares if the specified alarm is greater than the number set
+func (j *Alarm) Above(v float64) *Alarm {
+	if isComparisonCorrect(j, v, above) {
+		setComparison(j, v, above)
 	}
 	return j
 }
 
-// Time = Minutes
-// Memory = MB
-func (j *alarm) Below(v float64) *alarm {
-	if j.err == nil {
-		if j.jobType != alertTypeNotDefined && j.stats.metric != status {
-			if j.comparison == comparisonNotDefined {
-				(*j).value = value{value: v, percentage: false}
-				(*j).comparison = below
-			} else {
-				(*j).err = ErrMultipleComparisonDefined
-			}
-		} else {
-			(*j).err = ErrIncorrectTypeForBelow
-		}
+// AboveEqual compares if the specified alarm is greater or equal than the number set
+func (j *Alarm) AboveEqual(v float64) *Alarm {
+	if isComparisonCorrect(j, v, aboveEqual) {
+		setComparison(j, v, aboveEqual)
+	}
+	return j
+}
+
+// BelowEqual compares if the specified alarm is lower or equal than the number set
+func (j *Alarm) BelowEqual(v float64) *Alarm {
+	if isComparisonCorrect(j, v, belowEqual) {
+		setComparison(j, v, belowEqual)
+	}
+	return j
+}
+
+// Equal compares if the specified alarm is equal than the number set
+func (j *Alarm) Equal(v float64) *Alarm {
+	if isComparisonCorrect(j, v, equal) {
+		setComparison(j, v, equal)
+	}
+	return j
+}
+
+// Below compares if the specified alarm is lower than the number set
+func (j *Alarm) Below(v float64) *Alarm {
+	if isComparisonCorrect(j, v, below) {
+		setComparison(j, v, below)
 	}
 	return j
 }
@@ -104,21 +138,22 @@ func parsePercentage(percent float64) (float64, error) {
 	return percent, nil
 }
 
-func (j *alarm) Percent() *alarm {
-	if j.err == nil {
-		if j.value.value == not_set {
-			(*j).err = ErrExpectedNumWhenPercentage
+// Percent allows using the value specified as a percentage
+func (j *Alarm) Percent() *Alarm {
+	if j.Err == nil {
+		if j.value.value == notSet {
+			(*j).Err = ErrExpectedNumWhenPercentage
 			return j
 		}
 		if j.jobType == uptimeAlarm || j.stats.metric == status {
-			(*j).err = ErrIncorrectTypeForPercentage
+			(*j).Err = ErrIncorrectTypeForPercentage
 			return j
 		}
 
 		val, err := parsePercentage(j.value.value)
 
 		if err != nil {
-			(*j).err = err
+			(*j).Err = err
 		} else {
 			(*j).value = value{value: val, percentage: true}
 		}
