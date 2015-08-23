@@ -8,12 +8,16 @@ import (
 	"github.com/cloudfoundry/gosigar"
 )
 
+// check interval set to 5 seconds as default
+var Duration = 5
+
+var Alarms = make([]*Alarm, 0)
+var notSet = 123456.123456
+
+// Error codes returned by failures when trying to create the alert chain
 var (
-	Duration                         = 5 // default check interval set to 5 seconds
-	alarms                           = make([]*alarm, 0)
-	not_set                          = 123456.123456
-	ErrAlarmTypeNotDefined           = errors.New("Bad chain. alarm type not defined")
-	ErrComparisonNotDefined          = errors.New("Bad chain. alarm comparison not defined")
+	ErrAlarmTypeNotDefined           = errors.New("Bad chain. Alarm type not defined")
+	ErrComparisonNotDefined          = errors.New("Bad chain. Alarm comparison not defined")
 	ErrExpectedNumWhenPercentage     = errors.New("Bad chain. A number is needed for applying a percentage")
 	ErrIncorrectTypeForFree          = errors.New("Alarm type not set or trying to use Free with something different than memory or swap memory")
 	ErrIncorrectTypeForUsed          = errors.New("Alarm type not set or trying to use Free with something different than memory, swap memory or memory used by a proc")
@@ -22,12 +26,14 @@ var (
 	ErrMultipleComparisonDefined     = errors.New("Alarm comparison already defined")
 	ErrIncorrectTypeForAbove         = errors.New("Alarm type not set or trying to use Above with a status metric")
 	ErrIncorrectTypeForBelow         = errors.New("Alarm type not set or trying to use Below with a status metric")
-	ErrIncorrectTypeForPercentage    = errors.New("Couldn't apply percentage to uptime/status alarms")
+	ErrIncorrectTypeForPercentage    = errors.New("Couldn't apply percentage to uptime/status Alarms")
 	ErrIncorrectValuesWithPercentage = errors.New("Couldn't apply percentage")
 	ErrInexistentPid                 = errors.New("Pid does not exist")
+	ErrIncorrectTypeForComparison    = errors.New("Alarm type not set or trying to use an incorrect comparison with this type of Alarm")
+	ErrIncorrectTypeForMetric        = errors.New("Alarm type not set or trying to use an incorrect metric with this type of Alarm")
 )
 
-type alarmType int
+type AlarmType int
 type comparison int
 
 type value struct {
@@ -35,14 +41,13 @@ type value struct {
 	percentage bool
 }
 
-type alarm struct {
-	metricsManager SigarMetrics
-	procMem        sigar.ProcMem
+type Alarm struct {
+	metricsManager sigarMetrics
 	quit           chan bool
 	result         chan bool
-	err            error
+	Err            error
 	task           func()
-	jobType        alarmType
+	jobType        AlarmType
 	comparison     comparison
 	value          value
 	stats          stats
@@ -58,7 +63,7 @@ const (
 )
 
 const (
-	alertTypeNotDefined alarmType = iota
+	alertTypeNotDefined AlarmType = iota
 	loadAlarm
 	memoryAlarm
 	swapAlarm
@@ -66,7 +71,7 @@ const (
 	procAlarm
 )
 
-type SigarMetrics interface {
+type sigarMetrics interface {
 	sigar.Sigar
 	GetProcState(int) (sigar.ProcState, error)
 	GetProcMem(int) (sigar.ProcMem, error)
@@ -102,15 +107,15 @@ func (c *ConcreteSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
 	return p, err
 }
 
-func AddAlarm(a *alarm) error {
-	if a.err == nil {
-		go func(b *alarm) {
+func AddAlarm(a *Alarm) error {
+	if a.Err == nil {
+		go func(b *Alarm) {
 			scheduler.Every(Duration).Seconds().NotImmediately().Run(func() {
-				Check(b)
+				check(b)
 			})
 		}(a)
 
-		go func(b *alarm) {
+		go func(b *Alarm) {
 			for {
 				select {
 				case fired := <-b.result:
@@ -121,10 +126,10 @@ func AddAlarm(a *alarm) error {
 			}
 		}(a)
 
-		alarms = append(alarms, a)
+		Alarms = append(Alarms, a)
 		return nil
 	}
-	return a.err
+	return a.Err
 }
 
 func compare(value1, value2 float64, c comparison) bool {
@@ -143,7 +148,7 @@ func compare(value1, value2 float64, c comparison) bool {
 	return false
 }
 
-func (j *alarm) SetMetricsManager(m SigarMetrics) {
+func (j *Alarm) SetMetricsManager(m sigarMetrics) {
 	(*j).metricsManager = m
 }
 
@@ -152,96 +157,96 @@ func pidExists(pid int) bool {
 	return killErr == nil
 }
 
-func Check(alarm *alarm) {
-	if alarm.err == nil {
-		switch alarm.jobType {
+func check(Alarm *Alarm) {
+	if Alarm.Err == nil {
+		switch Alarm.jobType {
 		case loadAlarm:
-			alarm.result <- compare(
+			Alarm.result <- compare(
 				getLoadAverage(
-					alarm.stats.period,
-					alarm.metricsManager,
-					alarm.value.percentage),
-				alarm.value.value,
-				alarm.comparison)
+					Alarm.stats.period,
+					Alarm.metricsManager,
+					Alarm.value.percentage),
+				Alarm.value.value,
+				Alarm.comparison)
 
 		case uptimeAlarm:
-			alarm.result <- compare(
+			Alarm.result <- compare(
 				getUptime(
-					alarm.metricsManager),
-				alarm.value.value,
-				alarm.comparison)
+					Alarm.metricsManager),
+				Alarm.value.value,
+				Alarm.comparison)
 
 		case procAlarm:
-			switch alarm.stats.metric {
+			switch Alarm.stats.metric {
 			case used_:
-				alarm.result <- compare(
-					getPidMemory(alarm.stats.proc.pid,
-						alarm.metricsManager,
-						alarm.value.percentage),
-					alarm.value.value,
-					alarm.comparison)
-			case time:
-				alarm.result <- compare(
-					getPidTime(alarm.stats.proc.pid,
-						alarm.metricsManager),
-					alarm.value.value,
-					alarm.comparison)
+				Alarm.result <- compare(
+					getPidMemory(Alarm.stats.proc.pid,
+						Alarm.metricsManager,
+						Alarm.value.percentage),
+					Alarm.value.value,
+					Alarm.comparison)
+			case time_:
+				Alarm.result <- compare(
+					getPidTime(Alarm.stats.proc.pid,
+						Alarm.metricsManager),
+					Alarm.value.value,
+					Alarm.comparison)
 			case status:
-				alarm.result <- compare(
-					float64(getPidState(alarm.stats.proc.pid,
-						alarm.metricsManager)),
-					alarm.value.value,
-					alarm.comparison)
+				Alarm.result <- compare(
+					float64(getPidState(Alarm.stats.proc.pid,
+						Alarm.metricsManager)),
+					float64(Alarm.stats.proc.state),
+					equal)
 			}
 
 		case memoryAlarm:
-			switch alarm.stats.metric {
+			switch Alarm.stats.metric {
 			case free_:
-				alarm.result <- compare(
+				Alarm.result <- compare(
 					float64(getActualFreeMemory(
-						alarm.metricsManager,
-						alarm.value.percentage,
+						Alarm.metricsManager,
+						Alarm.value.percentage,
 					)),
-					alarm.value.value,
-					alarm.comparison)
+					Alarm.value.value,
+					Alarm.comparison)
 			case used_:
-				alarm.result <- compare(
+				Alarm.result <- compare(
 					float64(getActualUsedMemory(
-						alarm.metricsManager,
-						alarm.value.percentage,
+						Alarm.metricsManager,
+						Alarm.value.percentage,
 					)),
-					alarm.value.value,
-					alarm.comparison)
+					Alarm.value.value,
+					Alarm.comparison)
 			}
 
 		case swapAlarm:
-			switch alarm.stats.metric {
+			switch Alarm.stats.metric {
 			case free_:
-				alarm.result <- compare(
+				Alarm.result <- compare(
 					float64(getActualFreeSwap(
-						alarm.metricsManager,
-						alarm.value.percentage,
+						Alarm.metricsManager,
+						Alarm.value.percentage,
 					)),
-					alarm.value.value,
-					alarm.comparison)
+					Alarm.value.value,
+					Alarm.comparison)
 			case used_:
-				alarm.result <- compare(
+				Alarm.result <- compare(
 					float64(getActualUsedSwap(
-						alarm.metricsManager,
-						alarm.value.percentage,
+						Alarm.metricsManager,
+						Alarm.value.percentage,
 					)),
-					alarm.value.value,
-					alarm.comparison)
+					Alarm.value.value,
+					Alarm.comparison)
 			}
 		}
 	}
 }
 
-func SystemLoad(p period) *alarm {
-	return &alarm{
+func SystemLoad(p period) *Alarm {
+	a := &Alarm{
 		jobType: loadAlarm,
 		value: value{
-			value:      not_set,
+			value:      notSet,
 			percentage: false},
 		result: make(chan bool),
 		stats: stats{
@@ -249,13 +254,15 @@ func SystemLoad(p period) *alarm {
 			metric: 0,
 		},
 	}
+	a.SetMetricsManager(&ConcreteSigar{})
+	return a
 }
 
-func SystemProc(pid uint) *alarm {
-	alarm := &alarm{
+func SystemProc(pid uint) *Alarm {
+	a := &Alarm{
 		jobType: procAlarm,
 		value: value{
-			value:      not_set,
+			value:      notSet,
 			percentage: false},
 		result: make(chan bool),
 		stats: stats{
@@ -267,16 +274,17 @@ func SystemProc(pid uint) *alarm {
 			}},
 	}
 	if !pidExists(int(pid)) {
-		alarm.err = errors.New("Pid does not exist")
+		a.Err = ErrInexistentPid
 	}
-	return alarm
+	a.SetMetricsManager(&ConcreteSigar{})
+	return a
 }
 
-func SystemMemory() *alarm {
-	a := &alarm{
+func SystemMemory() *Alarm {
+	a := &Alarm{
 		jobType: memoryAlarm,
 		value: value{
-			value:      not_set,
+			value:      notSet,
 			percentage: false},
 		result: make(chan bool),
 		stats: stats{
@@ -288,11 +296,11 @@ func SystemMemory() *alarm {
 	return a
 }
 
-func SystemSwap() *alarm {
-	return &alarm{
+func SystemSwap() *Alarm {
+	a := &Alarm{
 		jobType: swapAlarm,
 		value: value{
-			value:      not_set,
+			value:      notSet,
 			percentage: false},
 		result: make(chan bool),
 		stats: stats{
@@ -300,13 +308,15 @@ func SystemSwap() *alarm {
 			period: 0,
 		},
 	}
+	a.SetMetricsManager(&ConcreteSigar{})
+	return a
 }
 
-func SystemUptime() *alarm {
-	return &alarm{
+func SystemUptime() *Alarm {
+	a := &Alarm{
 		jobType: uptimeAlarm,
 		value: value{
-			value:      not_set,
+			value:      notSet,
 			percentage: false},
 		result: make(chan bool),
 		stats: stats{
@@ -314,21 +324,22 @@ func SystemUptime() *alarm {
 			period: 0,
 		},
 	}
+	a.SetMetricsManager(&ConcreteSigar{})
+	return a
 }
 
-func (j *alarm) execute() {
-	if j.err == nil {
+func (j *Alarm) execute() {
+	if j.Err == nil {
 		j.task()
 	}
 }
 
-func (j *alarm) Run(f func()) *alarm {
-	if j.err == nil {
-		if j.comparison == comparisonNotDefined {
-			(*j).err = ErrComparisonNotDefined
+func (j *Alarm) Run(f func()) *Alarm {
+	if j.Err == nil {
+		if (j.comparison == comparisonNotDefined) && j.stats.metric != status {
+			(*j).Err = ErrComparisonNotDefined
 			return j
 		}
-
 		(*j).task = f
 	}
 	return j
