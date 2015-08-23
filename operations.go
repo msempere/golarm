@@ -53,9 +53,7 @@ func isComparisonCorrect(a *Alarm, v float64, c comparison) bool {
 	return false
 }
 
-// Free can only work with:
-//	- MemoryAlarm
-//	- SwapAlarm
+// Free allows to specify that the created alarm will use the free memory as main metric
 func (j *Alarm) Free() *Alarm {
 	if isMetricCorrect(j, notSet, free_) {
 		setMetric(j, notSet, free_)
@@ -63,10 +61,7 @@ func (j *Alarm) Free() *Alarm {
 	return j
 }
 
-// Used can only work with:
-//	- MemoryAlarm
-//	- SwapAlarm
-//	- ProcAlarm -> used
+// Used allows to specify that the created alarm will use the used memory as main metric
 func (j *Alarm) Used() *Alarm {
 	if isMetricCorrect(j, notSet, used_) {
 		setMetric(j, notSet, used_)

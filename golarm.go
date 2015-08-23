@@ -11,6 +11,7 @@ import (
 // check interval set to 5 seconds as default
 var Duration = 5
 
+// alarms pool
 var Alarms = make([]*Alarm, 0)
 var notSet = 123456.123456
 
@@ -41,6 +42,7 @@ type value struct {
 	percentage bool
 }
 
+// Alarm defines a running alarm
 type Alarm struct {
 	metricsManager sigarMetrics
 	quit           chan bool
@@ -107,6 +109,7 @@ func (c *ConcreteSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
 	return p, err
 }
 
+// AddAlarm adds an alarm to the pool and starts it immediately
 func AddAlarm(a *Alarm) error {
 	if a.Err == nil {
 		go func(b *Alarm) {
@@ -148,6 +151,7 @@ func compare(value1, value2 float64, c comparison) bool {
 	return false
 }
 
+// Setmetricsmanager allows to set a specific sigar manager
 func (j *Alarm) SetMetricsManager(m sigarMetrics) {
 	(*j).metricsManager = m
 }
@@ -242,6 +246,8 @@ func check(Alarm *Alarm) {
 	}
 }
 
+// SystemLoad creates an alarm based on load metric
+// P is the period needed for calculating the load, and it could be OneMinPeriod, FiveMinPeriod or FifteenMinPeriod
 func SystemLoad(p period) *Alarm {
 	a := &Alarm{
 		jobType: loadAlarm,
@@ -258,6 +264,7 @@ func SystemLoad(p period) *Alarm {
 	return a
 }
 
+// SystemProc creates an alarm based on a process specified by PID
 func SystemProc(pid uint) *Alarm {
 	a := &Alarm{
 		jobType: procAlarm,
@@ -280,6 +287,7 @@ func SystemProc(pid uint) *Alarm {
 	return a
 }
 
+// SystemMemory creates an alarm based on memory metrics
 func SystemMemory() *Alarm {
 	a := &Alarm{
 		jobType: memoryAlarm,
@@ -296,6 +304,7 @@ func SystemMemory() *Alarm {
 	return a
 }
 
+// SystemSwap creates an alarm based on swap memory metrics
 func SystemSwap() *Alarm {
 	a := &Alarm{
 		jobType: swapAlarm,
@@ -312,6 +321,7 @@ func SystemSwap() *Alarm {
 	return a
 }
 
+// SystemUptime creates an alarm based on system uptime
 func SystemUptime() *Alarm {
 	a := &Alarm{
 		jobType: uptimeAlarm,
@@ -334,6 +344,8 @@ func (j *Alarm) execute() {
 	}
 }
 
+// Run allows a func to be specified.
+// This callback will be executed when the alarm is fired
 func (j *Alarm) Run(f func()) *Alarm {
 	if j.Err == nil {
 		if (j.comparison == comparisonNotDefined) && j.stats.metric != status {
