@@ -6,14 +6,14 @@ import (
 	"github.com/cloudfoundry/gosigar"
 )
 
-type FakeSigar struct {
+type fakeSigar struct {
 }
 
-func (f *FakeSigar) CollectCpuStats(collectionInterval t.Duration) (<-chan sigar.Cpu, chan<- struct{}) {
+func (f *fakeSigar) CollectCpuStats(collectionInterval t.Duration) (<-chan sigar.Cpu, chan<- struct{}) {
 	return nil, nil
 }
 
-func (f *FakeSigar) GetLoadAverage() (sigar.LoadAverage, error) {
+func (f *fakeSigar) GetLoadAverage() (sigar.LoadAverage, error) {
 	return sigar.LoadAverage{
 		One:     1,
 		Five:    1,
@@ -21,7 +21,7 @@ func (f *FakeSigar) GetLoadAverage() (sigar.LoadAverage, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetMem() (sigar.Mem, error) {
+func (f *fakeSigar) GetMem() (sigar.Mem, error) {
 	return sigar.Mem{
 		Total:      100000000,
 		Used:       20000000,
@@ -31,7 +31,7 @@ func (f *FakeSigar) GetMem() (sigar.Mem, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetSwap() (sigar.Swap, error) {
+func (f *fakeSigar) GetSwap() (sigar.Swap, error) {
 	return sigar.Swap{
 		Total: 100000000,
 		Used:  20000000,
@@ -39,7 +39,7 @@ func (f *FakeSigar) GetSwap() (sigar.Swap, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetFileSystemUsage(string) (sigar.FileSystemUsage, error) {
+func (f *fakeSigar) GetFileSystemUsage(string) (sigar.FileSystemUsage, error) {
 	return sigar.FileSystemUsage{
 		Total:     500,
 		Used:      250,
@@ -50,7 +50,7 @@ func (f *FakeSigar) GetFileSystemUsage(string) (sigar.FileSystemUsage, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetProcState(pid int) (sigar.ProcState, error) {
+func (f *fakeSigar) GetProcState(pid int) (sigar.ProcState, error) {
 	return sigar.ProcState{
 		Name:      "fakeProc",
 		State:     sigar.RunStateRun,
@@ -62,10 +62,10 @@ func (f *FakeSigar) GetProcState(pid int) (sigar.ProcState, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetProcMem(pid int) (sigar.ProcMem, error) {
+func (f *fakeSigar) GetProcMem(pid int) (sigar.ProcMem, error) {
 	return sigar.ProcMem{
 		Size:        100000000,
-		Resident:    200000000,
+		Resident:    100000000,
 		Share:       0,
 		MinorFaults: 0,
 		MajorFaults: 0,
@@ -73,7 +73,7 @@ func (f *FakeSigar) GetProcMem(pid int) (sigar.ProcMem, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
+func (f *fakeSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
 	return sigar.ProcTime{
 		StartTime: 123456,
 		User:      123456,
@@ -82,7 +82,7 @@ func (f *FakeSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
 	}, nil
 }
 
-func (f *FakeSigar) GetUpTime() (sigar.Uptime, error) {
+func (f *fakeSigar) GetUpTime() (sigar.Uptime, error) {
 	return sigar.Uptime{
 		Length: 120,
 	}, nil
