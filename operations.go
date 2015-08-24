@@ -13,19 +13,19 @@ func setComparison(a *Alarm, v float64, c comparison) {
 func isMetricCorrect(a *Alarm, v float64, m metric) bool {
 	if a.Err == nil {
 		switch m {
-		case free_:
+		case freeMetric:
 			if a.jobType == memoryAlarm || a.jobType == swapAlarm {
 				return true
 			}
-		case used_:
+		case usedMetric:
 			if a.jobType == memoryAlarm || a.jobType == swapAlarm || a.jobType == procAlarm {
 				return true
 			}
-		case time_:
+		case timeMetric:
 			if a.jobType == uptimeAlarm || a.jobType == procAlarm {
 				return true
 			}
-		case status:
+		case statusMetric:
 			if a.jobType != alertTypeNotDefined && a.jobType == procAlarm {
 				return true
 			}
@@ -40,7 +40,7 @@ func isComparisonCorrect(a *Alarm, v float64, c comparison) bool {
 		if a.comparison == comparisonNotDefined {
 			switch c {
 			case above, below, equal, belowEqual, aboveEqual:
-				if a.jobType != alertTypeNotDefined && a.stats.metric != status {
+				if a.jobType != alertTypeNotDefined && a.stats.metric != statusMetric {
 					return true
 				}
 				a.Err = ErrIncorrectTypeForComparison
@@ -55,32 +55,32 @@ func isComparisonCorrect(a *Alarm, v float64, c comparison) bool {
 
 // Free allows to specify that the created alarm will use the free memory as main metric
 func (j *Alarm) Free() *Alarm {
-	if isMetricCorrect(j, notSet, free_) {
-		setMetric(j, notSet, free_)
+	if isMetricCorrect(j, notSet, freeMetric) {
+		setMetric(j, notSet, freeMetric)
 	}
 	return j
 }
 
 // Used allows to specify that the created alarm will use the used memory as main metric
 func (j *Alarm) Used() *Alarm {
-	if isMetricCorrect(j, notSet, used_) {
-		setMetric(j, notSet, used_)
+	if isMetricCorrect(j, notSet, usedMetric) {
+		setMetric(j, notSet, usedMetric)
 	}
 	return j
 }
 
 // RunningTime gets the time a process has been running
 func (j *Alarm) RunningTime() *Alarm {
-	if isMetricCorrect(j, notSet, time_) {
-		setMetric(j, notSet, time_)
+	if isMetricCorrect(j, notSet, timeMetric) {
+		setMetric(j, notSet, timeMetric)
 	}
 	return j
 }
 
 // Status allows to specify the state for a given process
 func (j *Alarm) Status(s state) *Alarm {
-	if isMetricCorrect(j, notSet, status) {
-		setMetric(j, notSet, status)
+	if isMetricCorrect(j, notSet, statusMetric) {
+		setMetric(j, notSet, statusMetric)
 		(*j).stats.proc.state = s
 	}
 	return j
@@ -140,7 +140,7 @@ func (j *Alarm) Percent() *Alarm {
 			(*j).Err = ErrExpectedNumWhenPercentage
 			return j
 		}
-		if j.jobType == uptimeAlarm || j.stats.metric == status {
+		if j.jobType == uptimeAlarm || j.stats.metric == statusMetric {
 			(*j).Err = ErrIncorrectTypeForPercentage
 			return j
 		}

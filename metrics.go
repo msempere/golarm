@@ -16,10 +16,10 @@ var (
 )
 
 const (
-	free_ metric = iota + 1
-	used_
-	time_
-	status
+	freeMetric metric = iota + 1
+	usedMetric
+	timeMetric
+	statusMetric
 )
 
 // Linux process states to be used with status alarms
@@ -78,7 +78,7 @@ func getLoadAverage(p period, manager sigarMetrics, percentage bool) float64 {
 }
 
 func getPidState(pid uint, manager sigarMetrics) float64 {
-	value, err := manager.GetProcState(int(pid))
+	value, err := manager.getProcState(int(pid))
 	if err != nil {
 		return 6.0
 	}
@@ -86,7 +86,7 @@ func getPidState(pid uint, manager sigarMetrics) float64 {
 }
 
 func getPidMemory(pid uint, manager sigarMetrics, percentage bool) float64 {
-	memory, err := manager.GetProcMem(int(pid))
+	memory, err := manager.getProcMem(int(pid))
 
 	if err != nil {
 		return 0.0
@@ -102,7 +102,7 @@ func getPidMemory(pid uint, manager sigarMetrics, percentage bool) float64 {
 
 // get running time for PID in minutes
 func getPidTime(pid uint, manager sigarMetrics) float64 {
-	value, err := manager.GetProcTime(int(pid))
+	value, err := manager.getProcTime(int(pid))
 
 	if err != nil {
 		return 0.0
@@ -194,7 +194,7 @@ func getActualUsedSwap(manager sigarMetrics, percentage bool) float64 {
 }
 
 func getUptime(manager sigarMetrics) float64 {
-	value, err := manager.GetUpTime()
+	value, err := manager.getUpTime()
 	if err != nil {
 		return 0.0
 	}

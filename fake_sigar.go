@@ -50,7 +50,7 @@ func (f *fakeSigar) GetFileSystemUsage(string) (sigar.FileSystemUsage, error) {
 	}, nil
 }
 
-func (f *fakeSigar) GetProcState(pid int) (sigar.ProcState, error) {
+func (f *fakeSigar) getProcState(pid int) (sigar.ProcState, error) {
 	return sigar.ProcState{
 		Name:      "fakeProc",
 		State:     sigar.RunStateRun,
@@ -62,7 +62,7 @@ func (f *fakeSigar) GetProcState(pid int) (sigar.ProcState, error) {
 	}, nil
 }
 
-func (f *fakeSigar) GetProcMem(pid int) (sigar.ProcMem, error) {
+func (f *fakeSigar) getProcMem(pid int) (sigar.ProcMem, error) {
 	return sigar.ProcMem{
 		Size:        100000000,
 		Resident:    100000000,
@@ -73,7 +73,7 @@ func (f *fakeSigar) GetProcMem(pid int) (sigar.ProcMem, error) {
 	}, nil
 }
 
-func (f *fakeSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
+func (f *fakeSigar) getProcTime(pid int) (sigar.ProcTime, error) {
 	return sigar.ProcTime{
 		StartTime: 123456,
 		User:      123456,
@@ -82,7 +82,7 @@ func (f *fakeSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
 	}, nil
 }
 
-func (f *fakeSigar) GetUpTime() (sigar.Uptime, error) {
+func (f *fakeSigar) getUpTime() (sigar.Uptime, error) {
 	return sigar.Uptime{
 		Length: 120,
 	}, nil

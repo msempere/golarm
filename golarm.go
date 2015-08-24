@@ -34,7 +34,7 @@ var (
 	ErrIncorrectTypeForMetric        = errors.New("Alarm type not set or trying to use an incorrect metric with this type of Alarm")
 )
 
-type AlarmType int
+type alarmType int
 type comparison int
 
 type value struct {
@@ -49,7 +49,7 @@ type Alarm struct {
 	result         chan bool
 	Err            error
 	task           func()
-	jobType        AlarmType
+	jobType        alarmType
 	comparison     comparison
 	value          value
 	stats          stats
@@ -65,7 +65,7 @@ const (
 )
 
 const (
-	alertTypeNotDefined AlarmType = iota
+	alertTypeNotDefined alarmType = iota
 	loadAlarm
 	memoryAlarm
 	swapAlarm
@@ -75,35 +75,35 @@ const (
 
 type sigarMetrics interface {
 	sigar.Sigar
-	GetProcState(int) (sigar.ProcState, error)
-	GetProcMem(int) (sigar.ProcMem, error)
-	GetProcTime(int) (sigar.ProcTime, error)
-	GetUpTime() (sigar.Uptime, error)
+	getProcState(int) (sigar.ProcState, error)
+	getProcMem(int) (sigar.ProcMem, error)
+	getProcTime(int) (sigar.ProcTime, error)
+	getUpTime() (sigar.Uptime, error)
 }
 
-type ConcreteSigar struct {
+type concreteSigar struct {
 	sigar.ConcreteSigar
 }
 
-func (c *ConcreteSigar) GetUpTime() (sigar.Uptime, error) {
+func (c *concreteSigar) getUpTime() (sigar.Uptime, error) {
 	p := sigar.Uptime{}
 	err := p.Get()
 	return p, err
 }
 
-func (c *ConcreteSigar) GetProcState(pid int) (sigar.ProcState, error) {
+func (c *concreteSigar) getProcState(pid int) (sigar.ProcState, error) {
 	p := sigar.ProcState{}
 	err := p.Get(pid)
 	return p, err
 }
 
-func (c *ConcreteSigar) GetProcMem(pid int) (sigar.ProcMem, error) {
+func (c *concreteSigar) getProcMem(pid int) (sigar.ProcMem, error) {
 	p := sigar.ProcMem{}
 	err := p.Get(pid)
 	return p, err
 }
 
-func (c *ConcreteSigar) GetProcTime(pid int) (sigar.ProcTime, error) {
+func (c *concreteSigar) getProcTime(pid int) (sigar.ProcTime, error) {
 	p := sigar.ProcTime{}
 	err := p.Get(pid)
 	return p, err
@@ -151,7 +151,7 @@ func compare(value1, value2 float64, c comparison) bool {
 	return false
 }
 
-// Setmetricsmanager allows to set a specific sigar manager
+// SetMetricsManager allows to set a specific sigar manager
 func (j *Alarm) SetMetricsManager(m sigarMetrics) {
 	(*j).metricsManager = m
 }
@@ -182,20 +182,20 @@ func check(Alarm *Alarm) {
 
 		case procAlarm:
 			switch Alarm.stats.metric {
-			case used_:
+			case usedMetric:
 				Alarm.result <- compare(
 					getPidMemory(Alarm.stats.proc.pid,
 						Alarm.metricsManager,
 						Alarm.value.percentage),
 					Alarm.value.value,
 					Alarm.comparison)
-			case time_:
+			case timeMetric:
 				Alarm.result <- compare(
 					getPidTime(Alarm.stats.proc.pid,
 						Alarm.metricsManager),
 					Alarm.value.value,
 					Alarm.comparison)
-			case status:
+			case statusMetric:
 				Alarm.result <- compare(
 					float64(getPidState(Alarm.stats.proc.pid,
 						Alarm.metricsManager)),
@@ -205,7 +205,7 @@ func check(Alarm *Alarm) {
 
 		case memoryAlarm:
 			switch Alarm.stats.metric {
-			case free_:
+			case freeMetric:
 				Alarm.result <- compare(
 					float64(getActualFreeMemory(
 						Alarm.metricsManager,
@@ -213,7 +213,7 @@ func check(Alarm *Alarm) {
 					)),
 					Alarm.value.value,
 					Alarm.comparison)
-			case used_:
+			case usedMetric:
 				Alarm.result <- compare(
 					float64(getActualUsedMemory(
 						Alarm.metricsManager,
@@ -225,7 +225,7 @@ func check(Alarm *Alarm) {
 
 		case swapAlarm:
 			switch Alarm.stats.metric {
-			case free_:
+			case freeMetric:
 				Alarm.result <- compare(
 					float64(getActualFreeSwap(
 						Alarm.metricsManager,
@@ -233,7 +233,7 @@ func check(Alarm *Alarm) {
 					)),
 					Alarm.value.value,
 					Alarm.comparison)
-			case used_:
+			case usedMetric:
 				Alarm.result <- compare(
 					float64(getActualUsedSwap(
 						Alarm.metricsManager,
@@ -260,7 +260,7 @@ func SystemLoad(p period) *Alarm {
 			metric: 0,
 		},
 	}
-	a.SetMetricsManager(&ConcreteSigar{})
+	a.SetMetricsManager(&concreteSigar{})
 	return a
 }
 
@@ -283,7 +283,7 @@ func SystemProc(pid uint) *Alarm {
 	if !pidExists(int(pid)) {
 		a.Err = ErrInexistentPid
 	}
-	a.SetMetricsManager(&ConcreteSigar{})
+	a.SetMetricsManager(&concreteSigar{})
 	return a
 }
 
@@ -300,7 +300,7 @@ func SystemMemory() *Alarm {
 			period: 0,
 		},
 	}
-	a.SetMetricsManager(&ConcreteSigar{})
+	a.SetMetricsManager(&concreteSigar{})
 	return a
 }
 
@@ -317,7 +317,7 @@ func SystemSwap() *Alarm {
 			period: 0,
 		},
 	}
-	a.SetMetricsManager(&ConcreteSigar{})
+	a.SetMetricsManager(&concreteSigar{})
 	return a
 }
 
@@ -334,7 +334,7 @@ func SystemUptime() *Alarm {
 			period: 0,
 		},
 	}
-	a.SetMetricsManager(&ConcreteSigar{})
+	a.SetMetricsManager(&concreteSigar{})
 	return a
 }
 
@@ -348,7 +348,7 @@ func (j *Alarm) execute() {
 // This callback will be executed when the alarm is fired
 func (j *Alarm) Run(f func()) *Alarm {
 	if j.Err == nil {
-		if (j.comparison == comparisonNotDefined) && j.stats.metric != status {
+		if (j.comparison == comparisonNotDefined) && j.stats.metric != statusMetric {
 			(*j).Err = ErrComparisonNotDefined
 			return j
 		}
