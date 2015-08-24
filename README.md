@@ -2,6 +2,7 @@
 [![GoDoc](https://godoc.org/github.com/msempere/golarm?status.svg)](https://godoc.org/github.com/msempere/golarm)
 [![Build Status](https://travis-ci.org/msempere/golarm.svg?branch=master)](https://travis-ci.org/msempere/golarm)
 [![Coverage Status](https://coveralls.io/repos/msempere/golarm/badge.svg?branch=master)](https://coveralls.io/r/msempere/golarm?branch=master)
+[![Go Report Card](http://goreportcard.com/badge/msempere/golarm)](http://goreportcard.com/report/msempere/golarm)
 
 Fire alarms with system events
 
