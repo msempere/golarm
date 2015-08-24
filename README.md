@@ -62,6 +62,9 @@ golarm.AddAlarm(golarm.SystemProc(72332).RunningTime().Above(20).Run(func() {
 		fmt.Println("Our process with PID 72332 exceeded 20 minutes running !!")
 	}))
 ```
+## TODO
+- [ ] Kilobytes / Megabytes / Gigabytes  `(currently megabytes by default)`
+- [ ] Minutes / Hours / Days  `(currently minutes by default)`
 
 ## License
 Distributed under MIT license. See `LICENSE` for more information.
